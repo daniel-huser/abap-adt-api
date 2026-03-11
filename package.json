@@ -1,6 +1,6 @@
 {
   "name": "@daniel-huser/abap-adt-api",
-  "version": "7.1.4",
+  "version": "7.1.6",
   "description": "Interface to Abap Developer Tools webservice",
   "outDir": "build",
   "main": "build/index.js",

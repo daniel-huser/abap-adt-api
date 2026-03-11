@@ -147,7 +147,10 @@ const link = t.type({
   rel: t.string,
   type: t.string
 })
-
+const tag = t.type({
+  name: t.string,
+  value: t.string
+})
 const finding = t.type({
   uri: t.string,
   location: uriParts,
@@ -159,7 +162,9 @@ const finding = t.type({
   exemptionApproval: t.string,
   exemptionKind,
   quickfixInfo: orUndefined(t.string),
-  link: link
+  link: link,
+  processor: t.string,
+  tags: t.array(tag)
 })
 const object = t.type({
   uri: t.string,
@@ -308,14 +313,18 @@ export async function atcWorklists(
       const location = parseUri(fa.location)
       const messageTitle = fa.messageTitle
       const checkTitle = fa.checkTitle
+      const processor = fa.processor
+      const tags = xmlArray(fa, "tags", "tag").map(xmlNodeAttr)
       return {
         ...fa,
         priority,
         messageTitle,
         checkTitle,
         location,
+        processor,
         messageId: `${fa.messageId}`,
-        link
+        link,
+        tags
       }
     })
     return { ...oa, findings }
@@ -692,11 +701,17 @@ async function readQuickFixConfiguration(h: AdtHTTP) {
     parseTagValue: false
   })
 
-  const uri = xmlNodeAttr(xmlNode(raw, "configurations", "configuration")).href
+  const uri = xmlNodeAttr(
+    xmlNode(raw, "configurations", "configuration", "link")
+  ).href
 
+  const headersConfig = {
+    Accept: "application/vnd.sap.adt.configuration.v1+xml",
+    "Content-Type": "application/vnd.sap.adt.configuration.v1+xml"
+  }
   const responseValue = await h.request(uri, {
     method: "GET",
-    headers: headers
+    headers: headersConfig
   })
 
   const rawValue = fullParse(response.body, {
