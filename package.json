@@ -1,6 +1,6 @@
 {
-  "name": "abap-adt-api",
-  "version": "7.1.1",
+  "name": "@daniel-huser/abap-adt-api",
+  "version": "7.1.4",
   "description": "Interface to Abap Developer Tools webservice",
   "outDir": "build",
   "main": "build/index.js",
@@ -15,11 +15,14 @@
     "ABAP",
     "ADT"
   ],
-  "author": "Marcello Urbani",
+  "author": "Daniel Huser",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/marcellourbani/abap-adt-api"
+    "url": "git+https://github.com/daniel-huser/abap-adt-api.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
   },
   "dependencies": {
     "axios": "^1.7.2",

@@ -10,3 +10,4 @@ _noderfc.log
 dev_rfc.log
 *.tgz
 .env
+.npmrc

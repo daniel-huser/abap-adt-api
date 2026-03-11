@@ -733,10 +733,46 @@ export async function atcGetCheckVariants(h: AdtHTTP, name?: string) {
   const variants = xmlArray(raw, "namedItemList", "namedItem").map(
     (item: any) => {
       return {
-        name: item["nameditem:name"],
-        description: item["nameditem:description"]
+        name: item["name"],
+        description: item["description"]
       }
     }
   ) as AtcCheckVariants
   return validateParseResult(atcCheckVariants.decode(variants))
+}
+
+export async function createAtcRunMulti(
+  h: AdtHTTP,
+  variant: string,
+  urlList: string[],
+  maxResults = 100
+): Promise<AtcRunResult> {
+  const body =
+    `<?xml version="1.0" encoding="UTF-8"?>
+<atc:run maximumVerdicts="${maxResults}" xmlns:atc="http://www.sap.com/adt/atc">
+	<objectSets xmlns:adtcore="http://www.sap.com/adt/core">
+		<objectSet kind="inclusive">
+			<adtcore:objectReferences>` +
+    urlList.map(url => `<adtcore:objectReference adtcore:uri="${url}"/>`) +
+    `</adtcore:objectReferences>
+		</objectSet>
+	</objectSets>
+</atc:run>`
+  const headers = {
+    Accept: "application/xml",
+    "Content-Type": "application/xml"
+  }
+  const response = await h.request(
+    `/sap/bc/adt/atc/runs?worklistId=${variant}`,
+    { method: "POST", headers, body }
+  )
+  const raw = fullParse(response.body, {
+    removeNSPrefix: true,
+    parseTagValue: false
+  })
+  const id = xmlNode(raw, "worklistRun", "worklistId")
+  const ts = xmlNode(raw, "worklistRun", "worklistTimestamp")
+  const infos = xmlArray(raw, "worklistRun", "infos", "info")
+  const retval = { id, timestamp: new Date(ts).getTime() / 1000, infos }
+  return validateParseResult(atcRunResult.decode(retval))
 }

@@ -196,6 +196,7 @@ import {
   atcCheckVariantId,
   atcGetCheckVariants,
   createAtcRun,
+  createAtcRunMulti,
   atcWorklists,
   AtcWorkList,
   atcUsers,
@@ -1439,6 +1440,14 @@ export class ADTClient {
 
   public createAtcRun(variant: string, mainUrl: string, maxResults = 100) {
     return createAtcRun(this.h, variant, mainUrl, maxResults)
+  }
+
+  public createAtcRunMulti(
+    variant: string,
+    urlList: string[],
+    maxResults = 100
+  ) {
+    return createAtcRunMulti(this.h, variant, urlList, maxResults)
   }
 
   public atcWorklists(runResultId: string): Promise<AtcWorkList>
