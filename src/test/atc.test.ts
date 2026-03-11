@@ -1,19 +1,10 @@
-import { ADTClient, isErrorMessageType } from ".."
+import { ADTClient } from ".."
 import { runTest } from "./login"
-import {
-  fullParse,
-  isArray,
-  isString,
-  toInt,
-  xmlArray,
-  xmlNode,
-  xmlNodeAttr
-} from "../utilities"
 
 const readAtcVariant = async (c: ADTClient) => {
   const cust = await c.atcCustomizing()
   const cv = cust.properties.find(x => x.name === "systemCheckVariant")
-  return c.atcCheckVariant(`${cv?.value}`)
+  return c.atcCheckVariantId(`${cv?.value}`)
 }
 
 test(
@@ -90,7 +81,7 @@ test(
     expect(findings.objects[0]).toBeDefined()
     expect(findings.objects[0].findings[0]).toBeDefined()
 
-    await c.autoQuickfix(
+    await c.atcAutoQuickfix(
       findings.objects[0].findings.map(finding => finding.uri)
     )
   })

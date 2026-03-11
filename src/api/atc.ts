@@ -191,12 +191,20 @@ const autoQuickfixProposal = t.array(
   })
 )
 
+const atcCheckVariants = t.array(
+  t.type({
+    name: t.string,
+    description: t.string
+  })
+)
+
 export type AtcRunResult = Clean<t.TypeOf<typeof atcRunResult>>
 export type AtcCustomizing = Clean<t.TypeOf<typeof atcCustomizingi>>
 export type AtcWorkList = Clean<t.TypeOf<typeof atcWorklist>>
 export type AtcUser = Clean<t.TypeOf<typeof atcUser>>
 export type AtcProposal = Clean<t.TypeOf<typeof atcProposal>>
 export type AtcProposalMessage = Clean<t.TypeOf<typeof atcProposalMessage>>
+export type AtcCheckVariants = Clean<t.TypeOf<typeof atcCheckVariants>>
 
 export const isProposalMessage = atcProposalMessage.is
 
@@ -223,7 +231,7 @@ export async function atcCustomizing(h: AdtHTTP): Promise<AtcCustomizing> {
   return validateParseResult(atcCustomizingi.decode(retval))
 }
 
-export async function atcCheckVariant(
+export async function atcCheckVariantId(
   h: AdtHTTP,
   variant: string
 ): Promise<string> {
@@ -657,7 +665,7 @@ async function autoquickFixExecute(
   )
 }
 
-export async function autoQuickfix(h: AdtHTTP, quickFixUriList: string[]) {
+export async function atcAutoQuickfix(h: AdtHTTP, quickFixUriList: string[]) {
   // Read Configurations
   const config = await readQuickFixConfiguration(h)
 
@@ -669,7 +677,7 @@ export async function autoQuickfix(h: AdtHTTP, quickFixUriList: string[]) {
   // Activate?
 }
 
-export async function readQuickFixConfiguration(h: AdtHTTP) {
+async function readQuickFixConfiguration(h: AdtHTTP) {
   const headers = {
     Accept: "application/vnd.sap.adt.configurations.v1+xml",
     "Content-Type": "application/vnd.sap.adt.configurations.v1+xml"
@@ -704,4 +712,31 @@ export async function readQuickFixConfiguration(h: AdtHTTP) {
   )
 
   return properties
+}
+
+export async function atcGetCheckVariants(h: AdtHTTP, name?: string) {
+  const maxItemCount = 50
+  const headers = {
+    Accept: "application/vnd.sap.adt.nameditems.v1+xml",
+    "Content-Type": "application/vnd.sap.adt.nameditems.v1+xml"
+  }
+  const response = await h.request(
+    `/sap/bc/adt/atc/variants?maxItemCount=${maxItemCount}&name=${name}`,
+    { method: "GET", headers: headers }
+  )
+
+  const raw = fullParse(response.body, {
+    removeNSPrefix: true,
+    parseTagValue: false
+  })
+
+  const variants = xmlArray(raw, "namedItemList", "namedItem").map(
+    (item: any) => {
+      return {
+        name: item["nameditem:name"],
+        description: item["nameditem:description"]
+      }
+    }
+  ) as AtcCheckVariants
+  return validateParseResult(atcCheckVariants.decode(variants))
 }

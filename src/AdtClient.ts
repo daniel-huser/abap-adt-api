@@ -193,14 +193,15 @@ import {
   ValidateOptions,
   ValidationResult,
   atcCustomizing,
-  atcCheckVariant,
+  atcCheckVariantId,
+  atcGetCheckVariants,
   createAtcRun,
   atcWorklists,
   AtcWorkList,
   atcUsers,
   atcExemptProposal,
   isProposalMessage,
-  autoQuickfix,
+  atcAutoQuickfix,
   atcContactUri,
   atcChangeContact,
   AtcProposal,
@@ -1432,8 +1433,8 @@ export class ADTClient {
     return atcCustomizing(this.h)
   }
 
-  public atcCheckVariant(variant: string) {
-    return atcCheckVariant(this.h, variant)
+  public atcCheckVariantId(variant: string) {
+    return atcCheckVariantId(this.h, variant)
   }
 
   public createAtcRun(variant: string, mainUrl: string, maxResults = 100) {
@@ -1483,8 +1484,12 @@ export class ADTClient {
     return atcContactUri(this.h, findingUri)
   }
 
-  public autoQuickfix(quickfixList: string[]) {
-    return autoQuickfix(this.h, quickfixList)
+  public atcAutoQuickfix(quickfixList: string[]) {
+    return atcAutoQuickfix(this.h, quickfixList)
+  }
+
+  public atcGetCheckVariants(name?: string) {
+    return atcGetCheckVariants(this.h, name)
   }
 
   public atcChangeContact(itemUri: string, userId: string) {

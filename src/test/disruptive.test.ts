@@ -618,7 +618,7 @@ test(
 const readAtcVariant = async (c: ADTClient) => {
   const cust = await c.atcCustomizing()
   const cv = cust.properties.find(x => x.name === "systemCheckVariant")
-  return c.atcCheckVariant(`${cv?.value}`)
+  return c.atcCheckVariantId(`${cv?.value}`)
 }
 
 test(
