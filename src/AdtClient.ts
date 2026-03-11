@@ -200,6 +200,7 @@ import {
   atcUsers,
   atcExemptProposal,
   isProposalMessage,
+  autoQuickfix,
   atcContactUri,
   atcChangeContact,
   AtcProposal,
@@ -1392,7 +1393,6 @@ export class ADTClient {
     return debuggerSetVariableValue(this.h, variableName, value)
   }
 
-
   public changePackagePreview(
     changePackageRefactoring: ChangePackageRefactoring,
     transport: string = ""
@@ -1474,13 +1474,17 @@ export class ADTClient {
   }
 
   public atcDocumentation(docUri: string) {
-    return atcDocumentation(this.h,docUri)
+    return atcDocumentation(this.h, docUri)
   }
 
   public isProposalMessage = isProposalMessage
 
   public atcContactUri(findingUri: string) {
     return atcContactUri(this.h, findingUri)
+  }
+
+  public autoQuickfix(quickfixList: string[]) {
+    return autoQuickfix(this.h, quickfixList)
   }
 
   public atcChangeContact(itemUri: string, userId: string) {

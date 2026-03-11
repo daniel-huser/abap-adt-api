@@ -15,6 +15,7 @@ import {
 import * as t from "io-ts"
 import { adtException, isErrorMessageType, validateParseResult } from ".."
 import { parseUri, uriParts } from "./urlparser"
+
 const exemptionKind = t.union([
   t.literal("A"),
   t.literal("I"),
@@ -182,6 +183,13 @@ const atcUser = t.type({
   id: t.string,
   title: t.string
 })
+
+const autoQuickfixProposal = t.array(
+  t.type({
+    uri: t.string,
+    qfType: t.string
+  })
+)
 
 export type AtcRunResult = Clean<t.TypeOf<typeof atcRunResult>>
 export type AtcCustomizing = Clean<t.TypeOf<typeof atcCustomizingi>>
@@ -409,13 +417,13 @@ export async function atcExemptProposal(
 }
 
 export async function atcDocumentation(h: AdtHTTP, docUri: string) {
-  const headers = { "Content-Type": "application/vnd.sap.adt.atc.items.v1+xml" }; 
+  const headers = { "Content-Type": "application/vnd.sap.adt.atc.items.v1+xml" }
   const response = await h.request(docUri, {
     headers,
     method: "GET"
   })
 
-  return response;
+  return response
 }
 
 export async function atcRequestExemption(
@@ -440,18 +448,18 @@ export async function atcRequestExemption(
         finding.type
       }" adtcore:uri="${finding.uri}" 
     atcfinding:checkId="${finding.checkId}" atcfinding:checksum="${
-        finding.checksum
-      }" atcfinding:checkTitle="${encodeEntity(finding.checkTitle)}" 
+      finding.checksum
+    }" atcfinding:checkTitle="${encodeEntity(finding.checkTitle)}" 
     atcfinding:exemptionApproval="${
       finding.exemptionApproval
     }" atcfinding:exemptionKind="${finding.exemptionKind}" 
     atcfinding:lastChangedBy="${finding.lastChangedBy}" 
     atcfinding:location="${finding.location}" atcfinding:messageId="${
-        finding.messageId
-      }" atcfinding:messageTitle="${encodeEntity(finding.messageTitle)}" 
+      finding.messageId
+    }" atcfinding:messageTitle="${encodeEntity(finding.messageTitle)}" 
     atcfinding:priority="${finding.priority}" atcfinding:processor="${
-        finding.processor
-      }" atcfinding:quickfixInfo="${finding.quickfixInfo}">
+      finding.processor
+    }" atcfinding:quickfixInfo="${finding.quickfixInfo}">
       <atcfinding:quickfixes atcfinding:automatic="false" atcfinding:manual="false" atcfinding:pseudo="false" />
     </atcfinding:finding>`
   const body = `<?xml version="1.0" encoding="ASCII"?>
@@ -468,20 +476,20 @@ export async function atcRequestExemption(
       }</atcexmpt:objectTypeDescr>
       <atcexmpt:restriction>
         <atcexmpt:thisFinding enabled="${restriction.enabled}">${
-    restriction.singlefinding
-  }</atcexmpt:thisFinding>
+          restriction.singlefinding
+        }</atcexmpt:thisFinding>
         <atcexmpt:rangeOfFindings enabled="${
           restriction.rangeOfFindings.enabled
         }">
           <atcexmpt:restrictByObject object="${
             restrictByObject.object
           }" package="${restrictByObject.package}" subobject="${
-    restrictByObject.subobject
-  }">
+            restrictByObject.subobject
+          }">
           ${restrictByObject.target}</atcexmpt:restrictByObject>
           <atcexmpt:restrictByCheck check="${restrictByCheck.check}" message="${
-    restrictByCheck.message
-  }">
+            restrictByCheck.message
+          }">
           ${restrictByCheck.target}</atcexmpt:restrictByCheck>
         </atcexmpt:rangeOfFindings>
       </atcexmpt:restriction>
@@ -550,4 +558,150 @@ export async function atcChangeContact(
       <atcfinding:item adtcore:uri="${itemUri}" atcfinding:processor="${userId}" atcfinding:status="2"/>
     </atcfinding:items>`
   await h.request(`/sap/bc/adt/atc/items`, { headers, body, method: "PUT" })
+}
+
+async function autoquickFixProposal(h: AdtHTTP, quickFixUriList: string[]) {
+  const body =
+    `<?xml version="1.0" encoding="UTF-8"?><adtcore:objectReferences xmlns:adtcore="http://www.sap.com/adt/core">` +
+    quickFixUriList.reduce(
+      (acc, quickFix) =>
+        acc + `  <adtcore:objectReference adtcore:uri="${quickFix}"/>`,
+      ""
+    ) +
+    `</adtcore:objectReferences>`
+
+  const headers = {
+    Accept: "application/vnd.sap.adt.atc.objectreferences.v1+xml",
+    "Content-Type": "application/vnd.sap.adt.atc.objectreferences.v1+xml"
+  }
+  const response = await h.request(
+    `/sap/bc/adt/atc/autoqf/worklist?step=proposal`,
+    { method: "POST", headers, body }
+  )
+  const raw = fullParse(response.body, {
+    removeNSPrefix: true,
+    parseTagValue: false
+  })
+
+  const checkMessages = xmlArray(
+    raw,
+    "autoQuickfixProposal",
+    "checkMessages",
+    "checkMessage"
+  )
+  const findings = checkMessages.flatMap(checkMessage =>
+    xmlArray(checkMessage, "findings", "finding").map(finding => {
+      const findingAttr = xmlNodeAttr(finding)
+      const quickfixes = xmlNodeAttr(xmlNode(finding, "quickfixes"))
+      return { uri: findingAttr.uri, qfType: quickfixes.selectedQuickfixType }
+    })
+  )
+
+  return validateParseResult(autoQuickfixProposal.decode(findings))
+}
+
+async function autoquickFixPreview(
+  h: AdtHTTP,
+  quickFixList: { uri: string; qfType: string }[],
+  addComments: boolean = true,
+  useAuthor: boolean = true
+) {
+  const body =
+    `<?xml version="1.0" encoding="UTF-8"?><autoqf:autoQuickfixSelection xmlns:autoqf="http://www.sap.com/adt/atc/autoquickfix" xmlns:adtcore="http://www.sap.com/adt/core">
+  <autoqf:quickfixSelections>` +
+    quickFixList.reduce(
+      (acc, quickFix) =>
+        acc +
+        ` <autoqf:quickfixSelection adtcore:uri="${quickFix.uri}" autoqf:qfType="${quickFix.qfType}"/>`,
+      ""
+    ) +
+    `</autoqf:quickfixSelections>
+  <autoqf:transport/>
+  <autoqf:ignoreErrors>false</autoqf:ignoreErrors>
+  <autoqf:ignoreErrorsAllowed>true</autoqf:ignoreErrorsAllowed>
+  <autoqf:userContent/>
+</autoqf:autoQuickfixSelection>`
+
+  const headers = {
+    Accept: "application/vnd.sap.adt.atc.autoqf.selection.v1+xml",
+    "Content-Type": "application/vnd.sap.adt.atc.autoqf.selection.v1+xml"
+  }
+  const response = await h.request(
+    `/sap/bc/adt/atc/autoqf/worklist?step=preview&useComments=${addComments}&useAuthor=${useAuthor}`,
+    { method: "POST", headers: headers, body }
+  )
+
+  return response.body
+    .replace(
+      '<autoqf:autoQuickfixPreview xmlns:autoqf="http://www.sap.com/adt/atc/autoquickfix">',
+      ""
+    )
+    .replace("<autoqf:conflicts/>", "")
+    .replace("<autoqf:userContent/>", "")
+    .replace("</autoqf:autoQuickfixPreview>", "")
+}
+
+async function autoquickFixExecute(
+  h: AdtHTTP,
+  genericRefactoring: string,
+  addComments: boolean = true,
+  useAuthor: boolean = true
+) {
+  const headers = {
+    Accept: "application/vnd.sap.adt.atc.genericrefactoring.v1+xml",
+    "Content-Type": " application/vnd.sap.adt.atc.genericrefactoring.v1+xml"
+  }
+  const response = await h.request(
+    `/sap/bc/adt/atc/autoqf/worklist?step=execute&useComments=${addComments}&useAuthor=${useAuthor}`,
+    { method: "POST", headers: headers, body: genericRefactoring }
+  )
+}
+
+export async function autoQuickfix(h: AdtHTTP, quickFixUriList: string[]) {
+  // Read Configurations
+  const config = await readQuickFixConfiguration(h)
+
+  const findings = await autoquickFixProposal(h, quickFixUriList)
+
+  const genericRefactoring = await autoquickFixPreview(h, findings)
+  await autoquickFixExecute(h, genericRefactoring)
+
+  // Activate?
+}
+
+export async function readQuickFixConfiguration(h: AdtHTTP) {
+  const headers = {
+    Accept: "application/vnd.sap.adt.configurations.v1+xml",
+    "Content-Type": "application/vnd.sap.adt.configurations.v1+xml"
+  }
+  const response = await h.request(
+    `/sap/bc/adt/atc/configuration/configurations`,
+    { method: "GET", headers: headers }
+  )
+
+  const raw = fullParse(response.body, {
+    removeNSPrefix: true,
+    parseTagValue: false
+  })
+
+  const uri = xmlNodeAttr(xmlNode(raw, "configurations", "configuration")).href
+
+  const responseValue = await h.request(uri, {
+    method: "GET",
+    headers: headers
+  })
+
+  const rawValue = fullParse(response.body, {
+    removeNSPrefix: true,
+    parseTagValue: false
+  })
+
+  const properties = xmlArray(
+    rawValue,
+    "configuration",
+    "properties",
+    "property"
+  )
+
+  return properties
 }
