@@ -228,7 +228,8 @@ import {
   ExtractMethodProposal,
   extractMethodPreview,
   extractMethodExecute,
-  GenericRefactoring
+  GenericRefactoring,
+  objectRelations
 } from "./api"
 import { followUrl, isString } from "./utilities"
 import https from "https"
@@ -1545,5 +1546,16 @@ export class ADTClient {
   }
   public extractMethodExecute(refactoring: GenericRefactoring) {
     return extractMethodExecute(this.h, refactoring)
+  }
+
+  /**
+   * Retrieves a resource content (i.e. a program's source code)
+   *
+   * @param objectSourceUrl Resource URL
+   * @param gitUser Username, only used for abapGit objects
+   * @param gitPassword password, only used for abapGit objects
+   */
+  public objectRelations(objectUri: string) {
+    return objectRelations(this.h, objectUri)
   }
 }

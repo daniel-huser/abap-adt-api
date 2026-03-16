@@ -151,6 +151,7 @@ const tag = t.type({
   name: t.string,
   value: t.string
 })
+
 const finding = t.type({
   uri: t.string,
   location: uriParts,
@@ -164,7 +165,12 @@ const finding = t.type({
   quickfixInfo: orUndefined(t.string),
   link: link,
   processor: t.string,
-  tags: t.array(tag)
+  tags: t.array(tag),
+  quickfixes: t.partial({
+    automatic: t.boolean,
+    manual: t.boolean,
+    pseudo: t.boolean
+  })
 })
 const object = t.type({
   uri: t.string,
@@ -314,7 +320,8 @@ export async function atcWorklists(
       const messageTitle = fa.messageTitle
       const checkTitle = fa.checkTitle
       const processor = fa.processor
-      const tags = xmlArray(fa, "tags", "tag").map(xmlNodeAttr)
+      const quickfixes = xmlNodeAttr(xmlNode(f, "quickfixes"))
+      const tags = xmlArray(f, "tags", "tag").map(xmlNodeAttr)
       return {
         ...fa,
         priority,
@@ -324,7 +331,8 @@ export async function atcWorklists(
         processor,
         messageId: `${fa.messageId}`,
         link,
-        tags
+        tags,
+        quickfixes
       }
     })
     return { ...oa, findings }
@@ -672,6 +680,8 @@ async function autoquickFixExecute(
     `/sap/bc/adt/atc/autoqf/worklist?step=execute&useComments=${addComments}&useAuthor=${useAuthor}`,
     { method: "POST", headers: headers, body: genericRefactoring }
   )
+
+  return response
 }
 
 export async function atcAutoQuickfix(h: AdtHTTP, quickFixUriList: string[]) {
@@ -680,8 +690,18 @@ export async function atcAutoQuickfix(h: AdtHTTP, quickFixUriList: string[]) {
 
   const findings = await autoquickFixProposal(h, quickFixUriList)
 
-  const genericRefactoring = await autoquickFixPreview(h, findings)
-  await autoquickFixExecute(h, genericRefactoring)
+  const genericRefactoring = await autoquickFixPreview(
+    h,
+    findings,
+    config.get("useQuickfixComments") === "true",
+    config.get("useQuickfixCommentAuthor") === "true"
+  )
+  const response = await autoquickFixExecute(
+    h,
+    genericRefactoring,
+    config.get("useQuickfixComments") === "true",
+    config.get("useQuickfixCommentAuthor") === "true"
+  )
 
   // Activate?
 }
@@ -714,7 +734,7 @@ async function readQuickFixConfiguration(h: AdtHTTP) {
     headers: headersConfig
   })
 
-  const rawValue = fullParse(response.body, {
+  const rawValue = fullParse(responseValue.body, {
     removeNSPrefix: true,
     parseTagValue: false
   })
@@ -726,7 +746,10 @@ async function readQuickFixConfiguration(h: AdtHTTP) {
     "property"
   )
 
-  return properties
+  return properties.reduce((acc: Map<string, string>, property: any) => {
+    acc.set(xmlNodeAttr(property).key, property["#text"])
+    return acc
+  }, new Map<string, string>()) as Map<string, string>
 }
 
 export async function atcGetCheckVariants(h: AdtHTTP, name?: string) {
@@ -768,7 +791,10 @@ export async function createAtcRunMulti(
 	<objectSets xmlns:adtcore="http://www.sap.com/adt/core">
 		<objectSet kind="inclusive">
 			<adtcore:objectReferences>` +
-    urlList.map(url => `<adtcore:objectReference adtcore:uri="${url}"/>`) +
+    urlList.reduce(
+      (acc, url) => acc + `<adtcore:objectReference adtcore:uri="${url}"/>`,
+      ""
+    ) +
     `</adtcore:objectReferences>
 		</objectSet>
 	</objectSets>

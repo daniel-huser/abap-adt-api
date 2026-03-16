@@ -16,11 +16,7 @@
   "prettier.arrowParens": "avoid",
   "editor.formatOnSave": true,
   "typescript.updateImportsOnFileMove.enabled": "always",
-  "jest.debugCodeLens.showWhenTestStateIn": [
-    "pass",
-    "fail",
-    "unknown"
-  ],
+  "jest.debugCodeLens.showWhenTestStateIn": ["pass", "fail", "unknown"],
   "[html]": {
     "editor.defaultFormatter": "vscode.html-language-features"
   },
@@ -34,7 +30,7 @@
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
   "[xml]": {
-    "editor.defaultFormatter": "mikeburgh.xml-format"
+    "editor.defaultFormatter": "DotJoshJohnson.xml"
   },
   "typescript.format.enable": true,
   "typescript.format.insertSpaceAfterCommaDelimiter": true,
@@ -55,8 +51,5 @@
   "typescript.format.placeOpenBraceOnNewLineForFunctions": false,
   "typescript.format.semicolons": "ignore",
   "typescript.preferences.quoteStyle": "auto",
-  "files.watcherExclude": {
-    "**/node_modules/*/**": false,
-    "**/node_modules/[!@]*/**/*": true
-  }
+  "files.watcherExclude": {}
 }
