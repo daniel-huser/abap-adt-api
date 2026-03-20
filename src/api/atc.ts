@@ -784,7 +784,7 @@ export async function createAtcRunMulti(
   variant: string,
   urlList: string[],
   maxResults = 100
-): Promise<AtcRunResult> {
+): Promise<void> {
   const body =
     `<?xml version="1.0" encoding="UTF-8"?>
 <atc:run maximumVerdicts="${maxResults}" xmlns:atc="http://www.sap.com/adt/atc">
@@ -804,16 +804,8 @@ export async function createAtcRunMulti(
     "Content-Type": "application/xml"
   }
   const response = await h.request(
-    `/sap/bc/adt/atc/runs?worklistId=${variant}`,
+    `/sap/bc/adt/atc/runs?worklistId=${variant}&clientWait=false`,
     { method: "POST", headers, body }
   )
-  const raw = fullParse(response.body, {
-    removeNSPrefix: true,
-    parseTagValue: false
-  })
-  const id = xmlNode(raw, "worklistRun", "worklistId")
-  const ts = xmlNode(raw, "worklistRun", "worklistTimestamp")
-  const infos = xmlArray(raw, "worklistRun", "infos", "info")
-  const retval = { id, timestamp: new Date(ts).getTime() / 1000, infos }
-  return validateParseResult(atcRunResult.decode(retval))
+  if (response.status > 300) throw adtException(response.body)
 }
